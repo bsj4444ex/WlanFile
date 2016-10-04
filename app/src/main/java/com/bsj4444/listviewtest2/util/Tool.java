@@ -32,9 +32,11 @@ public class Tool {
     public static  boolean receiveFlag=true;//接收广播标志
     public static boolean receiveMsgFlag=true; //接收消息标志
     public static String sendFileName=null; //要发送的文件名
+    public static long sendFileLength=0;//要发送的或接收的文件长度
     public static String receiverUserIp=null; //接收人ip
+    public static long progressLong=0;//已接收的长度
+    public static final int progressFlush=100;//刷新进度条
 
-    public static int sendMsg=100;
     public static final int broadcast=101; //广播消息
     public static final int broadcastResult=102;//回应广播
     public static final int requestSendFile=103;//请求发送文件
@@ -42,6 +44,7 @@ public class Tool {
     public static final int refuseReceiverFile=105;//拒绝接收文件
     public static String newsavepath="/mnt/sdcard/myMes";//文件存储路径
     public static String newFileName="name";//存储的文件名称
+    public static long newFileLength=0;//存储的文件长度
     public static int byteSize = 1024*5;
     public static String ChooseFilePath=null;//选择的文件路径
 

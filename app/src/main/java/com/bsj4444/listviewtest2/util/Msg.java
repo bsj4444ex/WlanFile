@@ -14,7 +14,9 @@ public class Msg  implements Serializable {
     public int type;
     public Object body;
 
-    public Msg(){}
+    public Msg(){
+        this.sendIp="";
+    }
 
     public Msg(String sendIp,String sendName,String receiverIp,String receiverName,int type,Object body){
         super();

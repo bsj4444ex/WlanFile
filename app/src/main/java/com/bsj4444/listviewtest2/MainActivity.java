@@ -2,24 +2,20 @@ package com.bsj4444.listviewtest2;
 
 import android.animation.ObjectAnimator;
 import android.app.Activity;
-import android.content.Context;
+import android.app.ProgressDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.net.wifi.WifiInfo;
-import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.widget.Toolbar;
-import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewConfiguration;
 import android.widget.AbsListView;
 import android.widget.AdapterView;
-import android.widget.EditText;
 import android.widget.Toast;
 
 
@@ -33,6 +29,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.jar.Manifest;
 
 /**
 * 滑动列表头菜单自动消失
@@ -41,6 +38,7 @@ import java.util.Map;
 public class MainActivity extends Activity {
 
     private String choosePath=null;
+    public ProgressDialog progressDialog;
 
     private ListView2 listView;
     private List<String> list;
@@ -56,6 +54,7 @@ public class MainActivity extends Activity {
     public Handler handler=new Handler(){
         @Override
         public void handleMessage(Message msg){
+            Tool.log("msg obj is .....");
             Msg msg1=(Msg)msg.obj;
             String sendIp=msg1.getSendIp();
             switch (msg.what){
@@ -76,6 +75,7 @@ public class MainActivity extends Activity {
                     Tool.receiverUserIp=sendIp;
                     String[] ss=((String)msg1.getBody()).split(":");
                     Tool.newFileName=ss[0];
+                    Tool.sendFileLength=(long)Double.parseDouble(ss[1]);
                     AlertDialog.Builder dialog=new AlertDialog.Builder(MainActivity.this);
                     dialog.setTitle("接收文件请求来自");
                     dialog.setMessage(sendIp);
@@ -85,11 +85,13 @@ public class MainActivity extends Activity {
                         public void onClick(DialogInterface dialog, int which) {
                             Msg msgResult=new Msg(Tool.hostIp,Tool.hostName,Tool.receiverUserIp,null,
                                     Tool.confirmReceiverFile,null);
-                                    tool.sendmsg(Tool.receiverUserIp,msgResult);
+                            tool.sendmsg(Tool.receiverUserIp,msgResult);
                             Tool.log("确认接收文件");
-                            FileTCPSever fts=new FileTCPSever();
+                            FileTCPSever fts=new FileTCPSever(MainActivity.this);
                             fts.start();
-
+                            (new progressFlush()).start();
+                            progressDialog.setMessage("接收中。。。");
+                            progressDialog.show();
                         }
                     }
             );
@@ -108,9 +110,18 @@ public class MainActivity extends Activity {
                     break;
                 case Tool.confirmReceiverFile:
                     Tool.log("收到确认请求");
-                    FileTCPClient ft=new FileTCPClient(msg1);
+                    FileTCPClient ft=new FileTCPClient(MainActivity.this,msg1);
                     ft.start();
+                    progressFlush pf=new progressFlush();
+                    pf.start();
+                    progressDialog.show();
                     break;
+                case Tool.progressFlush:  //刷新进度条
+                    int n=(int)(Tool.progressLong*100/Tool.sendFileLength);
+                    Tool.log("Tool.progressLong "+Tool.progressLong);
+                    Tool.log("Tool.sendFileLength "+Tool.sendFileLength);
+                    Tool.log("n is "+n);
+                    progressDialog.setProgress(n);
                 default:break;
             }
         }
@@ -156,6 +167,7 @@ public class MainActivity extends Activity {
         listView.setAdapter(listViewAdapter);
         listView.setOnTouchListener(myTouchListener);
         listView.setOnItemClickListener(myItemListener);
+        createProgressDialog();
     }
     private void toolbarAnim(int flag){
         if (mAnimator!=null&&mAnimator.isRunning()){
@@ -247,12 +259,46 @@ public class MainActivity extends Activity {
             case RESULT_OK:
                 choosePath=data.getStringExtra("path");
                 Tool.ChooseFilePath=choosePath;
+                Tool.sendFileLength=new File(choosePath).length();
+                Tool.sendFileName=new File(choosePath).getName();
                 Tool.log("文件路径"+choosePath);
                 Msg msgRequest=new Msg(Tool.hostIp,Tool.hostName,Tool.receiverUserIp,null,
-                        Tool.requestSendFile,(new File(choosePath).getName()+":"+new File(choosePath).length()));
+                        Tool.requestSendFile,(Tool.sendFileName+":"+Tool.sendFileLength));
                 tool.sendmsg(Tool.receiverUserIp,msgRequest);
                 break;
             default:break;
+        }
+    }
+
+    public void createProgressDialog(){
+        progressDialog = new ProgressDialog(MainActivity.this);
+        progressDialog.setTitle(Tool.sendFileName);
+        progressDialog.setMessage("发送中。。。");
+        progressDialog.setCancelable(false);
+        progressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+        progressDialog.setMax(100);// 设置最大进度指
+        progressDialog.setProgress(0);// 开始点
+        //progressDialog.onStart();
+        //progressDialog.show();
+        //progressDialog.dismiss();消失
+    }
+
+    class progressFlush extends Thread{
+        public progressFlush(){}
+        public void run(){
+            while(Tool.progressLong!=-1){
+                Message message=new Message();
+                message.what=Tool.progressFlush;
+                message.obj=new Msg();
+                handler.sendMessage(message);
+                Tool.log("Tool.progressLength is "+Tool.progressLong);
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+            Tool.progressLong=0;
         }
     }
 }

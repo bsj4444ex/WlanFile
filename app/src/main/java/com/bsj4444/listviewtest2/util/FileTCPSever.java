@@ -2,6 +2,8 @@ package com.bsj4444.listviewtest2.util;
 
 import android.app.Service;
 
+import com.bsj4444.listviewtest2.MainActivity;
+
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -14,7 +16,10 @@ import java.net.Socket;
  */
 public class FileTCPSever {
 
-    public FileTCPSever(){}
+    MainActivity father;
+    public FileTCPSever(MainActivity father){
+        this.father=father;
+    }
 
     public void start(){
         server s=new server();
@@ -35,6 +40,12 @@ public class FileTCPSever {
         Socket s=new Socket();
         s=ss.accept();
         File file=new File(Tool.newsavepath+"/"+Tool.newFileName);
+//        int n=0;
+//        while(file.exists()){
+//            n++;
+//            file=new File(Tool.newsavepath+"/"+Tool.newFileName+"("+n+")");
+//        }
+        Tool.log("fileName is "+Tool.newFileName);
         if(!file.exists()){
             file.getParentFile().mkdirs();
             file.createNewFile();
@@ -47,14 +58,17 @@ public class FileTCPSever {
         Tool.log("准备接收");
         while((len=is.read(data))!=-1){
             os.write(data,0,len);
-            Tool.log("len is "+len);
+            Tool.progressLong+=len;
             //进度条
         }
+        Tool.progressLong=-1;
+        father.progressDialog.dismiss();
         Tool.log("接收完毕");
 
         is.close();
         os.flush();
         os.close();
         s.close();
+        ss.close();
     }
 }
